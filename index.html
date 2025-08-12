@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CBSE Study Tracker</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    .container { max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+    header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+    h1 { font-size: 1.5rem; margin: 0; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 700px){ .grid { grid-template-columns: 1fr; } }
+    .card { border: 1px solid #ccc; border-radius: 10px; padding: 1rem; }
+    .row { display: flex; gap: .5rem; }
+    input, select, button, textarea { padding: .6rem .7rem; border-radius: 8px; border: 1px solid #aaa; background: inherit; color: inherit; }
+    button { cursor: pointer; border: 1px solid #888; }
+    ul { list-style: none; padding: 0; margin: .5rem 0 0; }
+    li { display: flex; gap: .5rem; align-items: center; padding: .35rem 0; }
+    .muted { opacity: .7; font-size: .9rem; }
+    .badge { font-size: .75rem; padding: .1rem .4rem; border: 1px solid #888; border-radius: 999px; }
+    .spacer { height: .5rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>CBSE Study Tracker</h1>
+      <div class="muted">Local data only</div>
+    </header>
+
+    <div class="grid">
+      <section class="card">
+        <h2 style="margin-top:0">Add Subject</h2>
+        <form id="subject-form" class="row">
+          <input id="subject-name" placeholder="Subject e.g. Mathematics" required />
+          <button>Add</button>
+        </form>
+        <ul id="subject-list"></ul>
+      </section>
+
+      <section class="card">
+        <h2 style="margin-top:0">Add Chapter/Topic</h2>
+        <form id="chapter-form">
+          <div class="row">
+            <select id="chapter-subject" required></select>
+            <input id="chapter-title" placeholder="Chapter/Topic title" required />
+          </div>
+          <div class="spacer"></div>
+          <textarea id="chapter-notes" placeholder="Notes or key points"></textarea>
+          <div class="spacer"></div>
+          <div class="row">
+            <input id="chapter-tags" placeholder="Tags (comma) e.g. algebra, ncert" />
+            <button>Add</button>
+          </div>
+        </form>
+        <ul id="chapter-list"></ul>
+      </section>
+    </div>
+
+    <section class="card" style="margin-top:1rem">
+      <div class="row" style="justify-content: space-between; align-items: center;">
+        <h2 style="margin:0">Search</h2>
+        <div class="row">
+          <input id="search-text" placeholder="Search title/notes/tags" />
+          <select id="filter-subject"><option value="">All subjects</option></select>
+          <button id="export-btn">Export</button>
+          <input id="import-file" type="file" accept="application/json" />
+        </div>
+      </div>
+      <ul id="results"></ul>
+    </section>
+  </div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script>
+    const storeKey = 'cbse-study-tracker-v1';
+    const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
+
+    function load() {
+      try { return JSON.parse(localStorage.getItem(storeKey)) || { subjects: [], chapters: [] }; } catch { return { subjects: [], chapters: [] }; }
+    }
+    function save(state) { localStorage.setItem(storeKey, JSON.stringify(state)); }
+
+    const state = load();
+
+    const subjectForm = document.getElementById('subject-form');
+    const subjectName = document.getElementById('subject-name');
+    const subjectList = document.getElementById('subject-list');
+
+    const chapterForm = document.getElementById('chapter-form');
+    const chapterSubject = document.getElementById('chapter-subject');
+    const chapterTitle = document.getElementById('chapter-title');
+    const chapterNotes = document.getElementById('chapter-notes');
+    const chapterTags = document.getElementById('chapter-tags');
+    const chapterList = document.getElementById('chapter-list');
+
+    const searchText = document.getElementById('search-text');
+    const filterSubject = document.getElementById('filter-subject');
+    const results = document.getElementById('results');
+    const exportBtn = document.getElementById('export-btn');
+    const importFile = document.getElementById('import-file');
+
+    function renderSubjects() {
+      subjectList.innerHTML = '';
+      chapterSubject.innerHTML = '';
+      filterSubject.innerHTML = '<option value="">All subjects</option>';
+      state.subjects.forEach(s => {
+        const li = document.createElement('li');
+        const span = document.createElement('span');
+        span.textContent = s.name;
+        span.style.flex = '1';
+        const del = document.createElement('button');
+        del.textContent = 'Delete';
+        del.onclick = () => { state.subjects = state.subjects.filter(x => x.id !== s.id); state.chapters = state.chapters.filter(c => c.subjectId !== s.id); save(state); render(); };
+        li.appendChild(span); li.appendChild(del); subjectList.appendChild(li);
+
+        const opt = document.createElement('option'); opt.value = s.id; opt.textContent = s.name; chapterSubject.appendChild(opt);
+        const opt2 = document.createElement('option'); opt2.value = s.id; opt2.textContent = s.name; filterSubject.appendChild(opt2);
+      });
+    }
+
+    function renderChapters() {
+      chapterList.innerHTML = '';
+      state.chapters.forEach(c => {
+        const li = document.createElement('li');
+        const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = !!c.done; cb.onchange = () => { c.done = !c.done; save(state); render(); };
+        const span = document.createElement('span'); span.style.flex = '1'; span.textContent = c.title + ' — ' + (state.subjects.find(s => s.id === c.subjectId)?.name || '');
+        if (c.done) span.style.textDecoration = 'line-through';
+        const tags = document.createElement('span'); tags.className = 'badge'; tags.textContent = (c.tags||[]).join(', ');
+        const del = document.createElement('button'); del.textContent = 'Delete'; del.onclick = () => { state.chapters = state.chapters.filter(x => x.id !== c.id); save(state); render(); };
+        li.appendChild(cb); li.appendChild(span); if (c.tags?.length) li.appendChild(tags); li.appendChild(del); chapterList.appendChild(li);
+      });
+    }
+
+    function renderSearch() {
+      const q = searchText.value.trim().toLowerCase();
+      const subj = filterSubject.value;
+      const list = state.chapters.filter(c => (!subj || c.subjectId === subj)).filter(c => {
+        if (!q) return true;
+        const hay = [c.title, c.notes, ...(c.tags||[])].join(' ').toLowerCase();
+        return hay.includes(q);
+      });
+      results.innerHTML = '';
+      list.forEach(c => {
+        const li = document.createElement('li');
+        const span = document.createElement('span'); span.style.flex = '1';
+        const subjectName = state.subjects.find(s => s.id === c.subjectId)?.name || '';
+        span.textContent = c.title + ' — ' + subjectName;
+        const small = document.createElement('span'); small.className = 'muted'; small.textContent = c.notes?.slice(0, 80) || '';
+        const tags = document.createElement('span'); tags.className = 'badge'; tags.textContent = (c.tags||[]).join(', ');
+        li.appendChild(span); if (small.textContent) li.appendChild(small); if (c.tags?.length) li.appendChild(tags);
+        results.appendChild(li);
+      });
+    }
+
+    function render() { renderSubjects(); renderChapters(); renderSearch(); }
+
+    subjectForm.onsubmit = (e) => {
+      e.preventDefault();
+      const name = subjectName.value.trim();
+      if (!name) return;
+      state.subjects.push({ id: uid(), name });
+      subjectName.value = '';
+      save(state); render();
+    };
+
+    chapterForm.onsubmit = (e) => {
+      e.preventDefault();
+      const sid = chapterSubject.value; const title = chapterTitle.value.trim();
+      if (!sid || !title) return;
+      const tags = chapterTags.value.split(',').map(s => s.trim()).filter(Boolean);
+      state.chapters.push({ id: uid(), subjectId: sid, title, notes: chapterNotes.value, tags, done: false, createdAt: Date.now() });
+      chapterTitle.value = ''; chapterNotes.value = ''; chapterTags.value = '';
+      save(state); render();
+    };
+
+    searchText.oninput = renderSearch;
+    filterSubject.onchange = renderSearch;
+
+    exportBtn.onclick = () => {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'cbse-study-tracker.json'; a.click();
+    };
+
+    importFile.onchange = async () => {
+      const file = importFile.files[0]; if (!file) return;
+      const text = await file.text();
+      try { const data = JSON.parse(text); if (data.subjects && data.chapters) { localStorage.setItem(storeKey, JSON.stringify(data)); Object.assign(state, data); render(); } } catch {}
+      importFile.value = '';
+    };
+
+    if (state.subjects.length === 0) {
+      state.subjects = [
+        { id: uid(), name: 'Mathematics' },
+        { id: uid(), name: 'Science' },
+        { id: uid(), name: 'English' },
+        { id: uid(), name: 'Social Science' }
+      ];
+      save(state);
+    }
+
+    render();
+  </script>
+</body>
+</html>
+
