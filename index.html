@@ -14,6 +14,27 @@
       --border: #e5e5ea;
       --accent: #0071e3;
       --shadow: 0 10px 30px rgba(0,0,0,.06);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 20px;
+      --space-6: 24px;
+      --shadow-xs: 0 1px 2px rgba(0,0,0,.06);
+      --shadow-sm: 0 4px 12px rgba(0,0,0,.06);
+      --shadow-md: 0 10px 30px rgba(0,0,0,.06);
+      --shadow-lg: 0 20px 60px rgba(0,0,0,.10);
+      --fz-12: 12px;
+      --fz-14: 14px;
+      --fz-16: 16px;
+      --fz-20: 20px;
+      --fz-24: 24px;
+      --trans-fast: .12s cubic-bezier(.2,.8,.2,1);
+      --trans: .2s cubic-bezier(.2,.8,.2,1);
       color-scheme: light dark;
     }
     @media (prefers-color-scheme: dark) {
@@ -24,7 +45,10 @@
         --muted: #9a9aa0;
         --border: #2a2a2b;
         --accent: #0a84ff;
-        --shadow: 0 10px 30px rgba(0,0,0,.4);
+        --shadow-xs: 0 1px 2px rgba(0,0,0,.4);
+        --shadow-sm: 0 4px 12px rgba(0,0,0,.35);
+        --shadow-md: 0 10px 30px rgba(0,0,0,.4);
+        --shadow-lg: 0 20px 60px rgba(0,0,0,.5);
       }
     }
     [data-theme="light"] { --bg: #f5f5f7; --surface: #ffffff; --text: #1d1d1f; --muted: #6e6e73; --border: #e5e5ea; --accent: #0071e3; --shadow: 0 10px 30px rgba(0,0,0,.06); }
@@ -62,13 +86,13 @@
 
     .deck-list { margin-top: 12px; display: grid; gap: 6px; }
     .deck {
-      display: flex; align-items: center; justify-content: space-between; gap: 8px;
-      padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
+      padding: 10px 12px; border-radius: var(--radius-md); border: 1px solid var(--border);
       background: var(--surface);
-      box-shadow: var(--shadow);
-      transition: transform .2s ease, box-shadow .2s ease;
+      box-shadow: var(--shadow-sm);
+      transition: transform var(--trans), box-shadow var(--trans);
     }
-    .deck:hover { transform: translateY(-1px); box-shadow: 0 12px 36px rgba(0,0,0,.08); }
+    .deck:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); }
     .deck.active { outline: 2px solid color-mix(in oklab, var(--accent), white 40%); }
 
     .deck-name { font-weight: 600; }
@@ -88,11 +112,12 @@
 
     .btn {
       appearance: none; -webkit-appearance: none;
-      padding: 10px 14px; border-radius: 12px; border: 1px solid var(--border);
+      padding: 10px 14px; border-radius: var(--radius-md); border: 1px solid var(--border);
       background: linear-gradient(180deg, color-mix(in oklab, var(--surface), white 4%), var(--surface));
       color: var(--text); cursor: pointer; font-weight: 600;
-      transition: transform .05s ease, box-shadow .2s ease, background .2s ease;
+      transition: transform .05s ease, box-shadow var(--trans), background var(--trans);
     }
+    .btn:focus-visible { outline: 2px solid color-mix(in oklab, var(--accent), white 35%); outline-offset: 2px; }
     .btn:active { transform: translateY(1px); }
     .btn.primary { border-color: color-mix(in oklab, var(--accent), black 20%); background: linear-gradient(180deg, color-mix(in oklab, var(--accent), white 15%), var(--accent)); color: white; }
     .btn.ghost { background: transparent; }
@@ -123,6 +148,27 @@
   <script type="text/babel">
     const { useState, useMemo, useEffect } = React;
 
+    const DS = {
+      Button({ children, variant = 'default', className = '', ...props }) {
+        const cls = ['btn', variant === 'primary' ? 'primary' : '', variant === 'ghost' ? 'ghost' : '', variant === 'danger' ? 'danger' : '', className].filter(Boolean).join(' ');
+        return <button className={cls} {...props}>{children}</button>;
+      },
+      Input({ className = '', ...props }) {
+        return <input className={className} style={{ width: '100%', padding: '10px 12px', background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', outline: 'none' }} {...props} />
+      },
+      Textarea({ className = '', rows = 3, ...props }) {
+        return <textarea className={className} rows={rows} style={{ width: '100%', padding: '10px 12px', background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', outline: 'none' }} {...props} />
+      },
+      Select({ className = '', children, ...props }) {
+        return <select className={className} style={{ width: '100%', padding: '10px 12px', background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', outline: 'none' }} {...props}>{children}</select>;
+      },
+      Card({ children, className = '', ...props }) {
+        return <div className={['card', className].filter(Boolean).join(' ')} {...props}>{children}</div>;
+      },
+      Title({ children }) { return <div style={{ fontWeight: 700, fontSize: 'var(--fz-16)' }}>{children}</div>; },
+      Subtle({ children }) { return <div className="muted">{children}</div>; },
+    };
+
     const storeKey = 'arc-cards-v1';
     const prefKey = 'arc-cards-theme';
     const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
@@ -151,11 +197,11 @@
             <div className="muted">Local-first flashcards</div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <select value={theme} onChange={e => setTheme(e.target.value)} style={{ borderRadius: 12, padding: '8px 12px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}>
+            <DS.Select value={theme} onChange={e => setTheme(e.target.value)}>
               <option value="system">System</option>
               <option value="light">Light</option>
               <option value="dark">Dark</option>
-            </select>
+            </DS.Select>
           </div>
         </div>
       );
@@ -174,17 +220,17 @@
           <div className="deck-list">
             {decks.map(d => (
               <div key={d.id} className={`deck ${activeId === d.id ? 'active' : ''}`}>
-                <button className="btn ghost" style={{ padding: 0, border: 'none', background: 'transparent', textAlign: 'left', flex: 1 }} onClick={() => setActiveId(d.id)}>
+                <DS.Button variant="ghost" style={{ padding: 0, border: 'none', background: 'transparent', textAlign: 'left', flex: 1 }} onClick={() => setActiveId(d.id)}>
                   <div className="deck-name">{d.name}</div>
                   <div className="muted deck-count">{d.count ?? 0} cards</div>
-                </button>
-                <button className="btn danger" onClick={() => deleteDeck(d.id)}>Delete</button>
+                </DS.Button>
+                <DS.Button variant="danger" onClick={() => deleteDeck(d.id)}>Delete</DS.Button>
               </div>
             ))}
           </div>
           <div className="add-row">
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="New deck" />
-            <button className="btn primary" onClick={() => { const n = name.trim(); if (!n) return; addDeck(n); setName(''); }}>Add</button>
+            <DS.Input value={name} onChange={e => setName(e.target.value)} placeholder="New deck" />
+            <DS.Button variant="primary" onClick={() => { const n = name.trim(); if (!n) return; addDeck(n); setName(''); }}>Add</DS.Button>
           </div>
         </aside>
       );
@@ -194,11 +240,11 @@
       const [front, setFront] = useState('');
       const [back, setBack] = useState('');
       return (
-        <div className="card">
+        <DS.Card>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ fontWeight: 700 }}>Add Card — {deck?.name || ''}</div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn" onClick={exportDeck}>Export</button>
+              <DS.Button onClick={exportDeck}>Export</DS.Button>
               <label className="btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                 Import
                 <input type="file" accept="application/json" style={{ display: 'none' }} onChange={e => importDeck(e.target.files?.[0] || null)} />
@@ -206,40 +252,40 @@
             </div>
           </div>
           <div className="grid-2" style={{ marginTop: 12 }}>
-            <textarea value={front} onChange={e => setFront(e.target.value)} rows={3} placeholder="Front" />
-            <textarea value={back} onChange={e => setBack(e.target.value)} rows={3} placeholder="Back" />
+            <DS.Textarea value={front} onChange={e => setFront(e.target.value)} rows={3} placeholder="Front" />
+            <DS.Textarea value={back} onChange={e => setBack(e.target.value)} rows={3} placeholder="Back" />
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
-            <button className="btn primary" onClick={() => { const f = front.trim(); const b = back.trim(); if (!f || !b) return; addCard(f, b); setFront(''); setBack(''); }}>Add Card</button>
+            <DS.Button variant="primary" onClick={() => { const f = front.trim(); const b = back.trim(); if (!f || !b) return; addCard(f, b); setFront(''); setBack(''); }}>Add Card</DS.Button>
           </div>
-        </div>
+        </DS.Card>
       );
     }
 
     function StudyView({ card, flip, isFlipped, answer }) {
       if (!card) return (
-        <div className="card" style={{ textAlign: 'center' }}>
+        <DS.Card style={{ textAlign: 'center' }}>
           <div className="muted">No cards due. Add more or come back later.</div>
-        </div>
+        </DS.Card>
       );
       return (
-        <div className="card">
+        <DS.Card>
           <div className="flashcard" onClick={flip} style={{ cursor: 'pointer' }}>
             <div>{card.front}</div>
             {isFlipped && <div className="back">{card.back}</div>}
           </div>
           <div className="answer-row">
-            <button className="btn" onClick={() => answer('again')}>Again</button>
-            <button className="btn primary" onClick={() => answer('good')}>Good</button>
-            <button className="btn" onClick={() => answer('easy')}>Easy</button>
+            <DS.Button onClick={() => answer('again')}>Again</DS.Button>
+            <DS.Button variant="primary" onClick={() => answer('good')}>Good</DS.Button>
+            <DS.Button onClick={() => answer('easy')}>Easy</DS.Button>
           </div>
-        </div>
+        </DS.Card>
       );
     }
 
     function CardTable({ cards, deleteCard }) {
       return (
-        <div className="card">
+        <DS.Card>
           <div style={{ fontWeight: 700, marginBottom: 8 }}>Cards</div>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -258,14 +304,14 @@
                     <td style={{ padding: 8, color: 'var(--muted)' }}>{c.back}</td>
                     <td style={{ padding: 8 }}>{new Date(c.dueAt || Date.now()).toLocaleString()}</td>
                     <td style={{ padding: 8, textAlign: 'right' }}>
-                      <button className="btn danger" onClick={() => deleteCard(c.id)}>Delete</button>
+                      <DS.Button variant="danger" onClick={() => deleteCard(c.id)}>Delete</DS.Button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </div>
+        </DS.Card>
       );
     }
 
